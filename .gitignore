@@ -1,1 +1,11 @@
-.idea/CAIProject2.iml
+# Ignore pycharm project folder
+.idea/
+.vscode/
+*.code-workspace
+
+# Ignore build related folders and files
+*.pyc
+
+# Ignore logging data
+logs/
+beliefs/
