@@ -31,7 +31,7 @@ def output_logger(fld):
             res = {action_header[i]: row[i] for i in range(len(action_header))}
             action_contents.append(res)
 
-    with open(fld+'/beliefs/currentTrustBelief.csv') as csvfile:
+    with open(fld+'/beliefs/localCurrentTrustBelief.csv') as csvfile:
         reader = csv.reader(csvfile, delimiter=';', quotechar="'")
         for row in reader:
             if trustfile_header==[]:
@@ -54,6 +54,6 @@ def output_logger(fld):
         csv_writer = csv.writer(csv_file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         csv_writer.writerow(['completeness','score','no_ticks','agent_actions','human_actions'])
         csv_writer.writerow([completeness,score,no_ticks,len(unique_agent_actions),len(unique_human_actions)])
-    with open(fld + '/beliefs/allTrustBeliefs.csv', mode='a+') as csv_file:
+    with open(fld + '/beliefs/localAllTrustBeliefs.csv', mode='a+') as csv_file:
         csv_writer = csv.writer(csv_file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         csv_writer.writerow([name,competence,willingness])
