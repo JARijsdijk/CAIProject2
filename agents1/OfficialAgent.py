@@ -71,10 +71,20 @@ class BaselineAgent(ArtificialBrain):
         self._receivedMessages = []
         self._moving = False
 
+        # Additional variables used for our trust implementation.
+        # Naivety:
+        # - Valued between 0 and 1, with 1 being completely naive.
+        # - This affects how quickly the robot regains trust with a human.
+        self._naivety = 1
+        # Trust Timestamp:
+        # - The last time trust has been evaluated, in tick number
+        self._trust_timestamp = 0
+
     def initialize(self):
         # Initialization of the state tracker and navigation algorithm
         self._state_tracker = StateTracker(agent_id=self.agent_id)
         self._navigator = Navigator(agent_id=self.agent_id,action_set=self.action_set, algorithm=Navigator.A_STAR_ALGORITHM)
+
 
     def filter_observations(self, state):
         # Filtering of the world state before deciding on an action 
@@ -95,7 +105,7 @@ class BaselineAgent(ArtificialBrain):
         self._processMessages(state, self._teamMembers, self._condition)
         # Initialize and update trust beliefs for team members
         trustBeliefs = self._loadBelief(self._teamMembers, self._folder)
-        self._trustBelief(self._teamMembers, trustBeliefs, self._folder, self._receivedMessages)
+        self._trustBelief(self._teamMembers, trustBeliefs, self._folder, self._receivedMessages, state)
 
         # Check whether human is close in distance
         if state[{'is_human_agent': True}]:
@@ -779,33 +789,27 @@ class BaselineAgent(ArtificialBrain):
         with open(folder+'/beliefs/localAllTrustBeliefs.csv') as csvfile:
             reader = csv.reader(csvfile, delimiter=';', quotechar="'")
             for row in reader:
-                if trustfile_header==[]:
-                    trustfile_header=row
+                if not trustfile_header :
+                    trustfile_header = row
                     continue
                 # Retrieve trust values 
-                if row and row[0]==self._humanName:
+                if row and row[0] == self._humanName:
                     name = row[0]
                     competence = float(row[1])
                     willingness = float(row[2])
                     trustBeliefs[name] = {'competence': competence, 'willingness': willingness}
                 # Initialize default trust values
-                if row and row[0]!=self._humanName:
+                if row and row[0] != self._humanName:
                     competence = default
                     willingness = default
                     trustBeliefs[self._humanName] = {'competence': competence, 'willingness': willingness}
         return trustBeliefs
 
-    def _trustBelief(self, members, trustBeliefs, folder, receivedMessages):
-        '''
-        Baseline implementation of a trust belief. Creates a dictionary with trust belief scores for each team member, for example based on the received messages.
-        '''
-        # Update the trust value based on for example the received messages
-        for message in receivedMessages:
-            # Increase agent trust in a team member that rescued a victim
-            if 'Collect' in message:
-                trustBeliefs[self._humanName]['competence']+=0.10
-                # Restrict the competence belief to a range of -1 to 1
-                trustBeliefs[self._humanName]['competence'] = np.clip(trustBeliefs[self._humanName]['competence'], -1, 1)
+    def _saveBelief(self, trustBeliefs, folder):
+        # Clip Willingness and Competence to a range of -1 to 1
+        trustBeliefs[self._humanName]['willingness'] = np.clip(trustBeliefs[self._humanName]['willingness'], -1, 1)
+        trustBeliefs[self._humanName]['competence'] = np.clip(trustBeliefs[self._humanName]['competence'], -1, 1)
+
         # Save current trust belief values so we can later use and retrieve them to add to a csv file with all the logged trust belief values
         with open(folder + '/beliefs/localCurrentTrustBelief.csv', mode='w') as csv_file:
             csv_writer = csv.writer(csv_file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
@@ -814,10 +818,32 @@ class BaselineAgent(ArtificialBrain):
 
         return trustBeliefs
 
+    def _trustBelief(self, members, trustBeliefs, folder, receivedMessages, state):
+        """
+        Baseline implementation of a trust belief. Creates a dictionary with trust belief scores for each team member, for example based on the received messages.
+        """
+        old_tick_nr = self._trust_timestamp
+        self._trust_timestamp = state['World']['nr_ticks']
+        time_elapsed = self._trust_timestamp - old_tick_nr
+
+        # Lower willingness based on time elapsed
+        trustBeliefs[self._humanName]['willingness'] -= time_elapsed * 0.001
+
+        # Update the trust value based on for example the received messages
+        for message in receivedMessages:
+            # Each time a human communicates, the willingness will increase.
+            trustBeliefs[self._humanName]['willingness'] += 0.10
+
+            # Increase agent trust in a team member that rescued a victim
+            if 'Collect' in message:
+                trustBeliefs[self._humanName]['competence'] += 0.10
+
+        return self._saveBelief(self, trustBeliefs, folder)
+
     def _sendMessage(self, mssg, sender):
-        '''
+        """
         send messages from agent to other team members
-        '''
+        """
         msg = Message(content=mssg, from_id=sender)
         if msg.content not in self.received_messages_content and 'Our score is' not in msg.content:
             self.send_message(msg)
@@ -827,9 +853,9 @@ class BaselineAgent(ArtificialBrain):
             self.send_message(msg)
 
     def _getClosestRoom(self, state, objs, currentDoor):
-        '''
+        """
         calculate which area is closest to the agent's location
-        '''
+        """
         agent_location = state[self.agent_id]['location']
         locs = {}
         for obj in objs:
