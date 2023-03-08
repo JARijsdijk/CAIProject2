@@ -776,7 +776,7 @@ class BaselineAgent(ArtificialBrain):
         trustfile_header = []
         trustfile_contents = []
         # Check if agent already collaborated with this human before, if yes: load the corresponding trust values, if no: initialize using default trust values
-        with open(folder+'/beliefs/allTrustBeliefs.csv') as csvfile:
+        with open(folder+'/beliefs/localAllTrustBeliefs.csv') as csvfile:
             reader = csv.reader(csvfile, delimiter=';', quotechar="'")
             for row in reader:
                 if trustfile_header==[]:
@@ -807,7 +807,7 @@ class BaselineAgent(ArtificialBrain):
                 # Restrict the competence belief to a range of -1 to 1
                 trustBeliefs[self._humanName]['competence'] = np.clip(trustBeliefs[self._humanName]['competence'], -1, 1)
         # Save current trust belief values so we can later use and retrieve them to add to a csv file with all the logged trust belief values
-        with open(folder + '/beliefs/currentTrustBelief.csv', mode='w') as csv_file:
+        with open(folder + '/beliefs/localCurrentTrustBelief.csv', mode='w') as csv_file:
             csv_writer = csv.writer(csv_file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             csv_writer.writerow(['name','competence','willingness'])
             csv_writer.writerow([self._humanName,trustBeliefs[self._humanName]['competence'],trustBeliefs[self._humanName]['willingness']])
