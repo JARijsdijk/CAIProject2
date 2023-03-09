@@ -803,16 +803,31 @@ class BaselineAgent(ArtificialBrain):
         for message in receivedMessages:
             # Increase agent trust in a team member that rescued a victim
             if 'Collect' in message:
-                trustBeliefs[self._humanName]['competence']+=0.10
+                trustBeliefs[self._humanName]['competence'] += 0.10
                 # Restrict the competence belief to a range of -1 to 1
                 trustBeliefs[self._humanName]['competence'] = np.clip(trustBeliefs[self._humanName]['competence'], -1, 1)
+                return self._saveTrustValues(trustBeliefs, folder)
+
+    def _saveTrustValues(self, trustBeliefs, folder):
         # Save current trust belief values so we can later use and retrieve them to add to a csv file with all the logged trust belief values
         with open(folder + '/beliefs/localCurrentTrustBelief.csv', mode='w') as csv_file:
             csv_writer = csv.writer(csv_file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            csv_writer.writerow(['name','competence','willingness'])
-            csv_writer.writerow([self._humanName,trustBeliefs[self._humanName]['competence'],trustBeliefs[self._humanName]['willingness']])
+            csv_writer.writerow(['name', 'competence', 'willingness'])
+            csv_writer.writerow([self._humanName, trustBeliefs[self._humanName]['competence'], trustBeliefs[self._humanName]['willingness']])
 
         return trustBeliefs
+
+    # A method to decide if the robot has waited long enough and adjust trust if the human take to long to respond/ help
+    def _decideToStayWaiting(self, trustBeliefs, waitedTime, taskDificulty):
+        willingness = trustBeliefs[self._humanName]['willingness']
+        if (waitedTime > taskDificulty * (willingness + 1)):
+            trustBeliefs[self._humanName]['willingness'] -= 0.40
+            # Restrict the competence belief to a range of -1 to 1
+            trustBeliefs[self._humanName]['willingness'] = np.clip(trustBeliefs[self._humanName]['willingness'], -1, 1)
+            self._saveTrustValues(trustBeliefs, self._folder)
+            self._waiting = False
+            return False
+        return True
 
     def _sendMessage(self, mssg, sender):
         '''
