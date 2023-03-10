@@ -949,6 +949,10 @@ class BaselineAgent(ArtificialBrain):
             if 'Collect' in message:
                 trustBeliefs[self._humanName]['competence'] += 0.10
 
+            # potentially distinguish between obstacle types. (!!! This requires changing the messages !!!) (TA)
+            if 'Remove' in message and trustBeliefs[self._humanName]['competence'] < 0.5:
+                trustBeliefs[self._humanName]['competence'] += 0.05
+
         return self._saveBelief(trustBeliefs, folder)
 
     def _updateWillingnessByAgility(self, trustBeliefs, folder, state):
