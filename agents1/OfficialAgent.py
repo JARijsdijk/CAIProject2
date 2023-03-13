@@ -953,6 +953,18 @@ class BaselineAgent(ArtificialBrain):
             if 'Remove' in message and trustBeliefs[self._humanName]['competence'] < 0.5:
                 trustBeliefs[self._humanName]['competence'] += 0.05
 
+    # A method to decide if the robot has waited long enough and adjust trust if the human take to long to respond/ help
+    def _decideToStayWaiting(self, trustBeliefs, waitedTime, taskDificulty):
+        willingness = trustBeliefs[self._humanName]['willingness']
+        if (waitedTime > taskDificulty * (willingness + 1)):
+            trustBeliefs[self._humanName]['willingness'] -= 0.40
+            # Restrict the competence belief to a range of -1 to 1
+            trustBeliefs[self._humanName]['willingness'] = np.clip(trustBeliefs[self._humanName]['willingness'], -1, 1)
+            self._saveTrustValues(trustBeliefs, self._folder)
+            self._waiting = False
+            return False
+        return True
+
         return self._saveBelief(trustBeliefs, folder)
 
     def _updateWillingnessByAgility(self, trustBeliefs, folder, state):
