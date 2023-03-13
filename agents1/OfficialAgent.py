@@ -371,6 +371,13 @@ class BaselineAgent(ArtificialBrain):
                                               'RescueBot')
                             self._callout_timestamp = state['World']['nr_ticks']
                             self._waiting = True
+                        if self._answered == False and not self._remove and self._waiting:
+                            if not self._decideToStayWaiting(trustBeliefs, state, 10, 0.2):
+                                self._answered = True
+                                self._waiting = False
+                                # Add area to the to do list
+                                self._tosearch.append(self._door['room_name'])
+                                self._phase = Phase.FIND_NEXT_GOAL
                             # Determine the next area to explore if the human tells the agent not to remove the obstacle
                         if self.received_messages_content and self.received_messages_content[
                             -1] == 'Continue' and not self._remove:
@@ -398,6 +405,13 @@ class BaselineAgent(ArtificialBrain):
                                                   'RescueBot')
                                 trustBeliefs = self._updateWillingnessByAgility(trustBeliefs, state, 0.1)
                                 return None, {}
+                            if not self._decideToStayWaiting(trustBeliefs, state, 15, 0.3):
+                                self._answered = True
+                                self._waiting = False
+                                trustBeliefs = self._updateWillingnessByAgility(trustBeliefs, state, 0.05)
+                                # Add area to the to do list
+                                self._tosearch.append(self._door['room_name'])
+                                self._phase = Phase.FIND_NEXT_GOAL
                         # Remain idle untill the human communicates what to do with the identified obstacle 
                         else:
                             return None, {}
@@ -414,6 +428,20 @@ class BaselineAgent(ArtificialBrain):
                                 \n clock - removal time: 10 seconds', 'RescueBot')
                             self._waiting = True
                             self._callout_timestamp = state['World']['nr_ticks']
+                        if self._answered == False and not self._remove and self._waiting:
+                            if not self._decideToStayWaiting(trustBeliefs, state, 7, 0.1):
+                                if not self._remove:
+                                    self._answered = True
+                                    self._waiting = False
+                                    #self._sendMessage('Removing tree blocking ' + str(self._door['room_name']) + '.',
+                                    #                  'RescueBot')
+                                    #if self._remove:
+                                    #    self._sendMessage('Removing tree blocking ' + str(
+                                    #        self._door['room_name']) + ' because you asked me to.', 'RescueBot')
+                                    # penguin
+                                self._phase = Phase.ENTER_ROOM
+                                self._remove = False
+                                return RemoveObject.__name__, {'object_id': info['obj_id']}
                         # Determine the next area to explore if the human tells the agent not to remove the obstacle
                         if self.received_messages_content and self.received_messages_content[
                             -1] == 'Continue' and not self._remove:
@@ -505,6 +533,12 @@ class BaselineAgent(ArtificialBrain):
                                                   'RescueBot')
                                 trustBeliefs = self._updateWillingnessByAgility(trustBeliefs, state, 0.1)
                                 return None, {}
+                            if not self._decideToStayWaiting(trustBeliefs, state, 15, 0.3):
+                                self._answered = True
+                                self._waiting = False
+                                self._phase = Phase.ENTER_ROOM
+                                self._remove = False
+                                return RemoveObject.__name__, {'object_id': info['obj_id']}
                         # Remain idle until the human communicates what to do with the identified obstacle
                         else:
                             return None, {}
@@ -599,6 +633,7 @@ class BaselineAgent(ArtificialBrain):
                                         clock - extra time when rescuing alone: 15 seconds \n afstand - distance between us: ' + self._distanceHuman,
                                                       'RescueBot')
                                     self._waiting = True
+                                    self._callout_timestamp = state['World']['nr_ticks']
 
                                 if 'critical' in vic and self._answered == False and not self._waiting:
                                     self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. Please decide whether to "Rescue" or "Continue" searching. \n\n \
@@ -607,6 +642,7 @@ class BaselineAgent(ArtificialBrain):
                                         self._collectedVictims) + '\n \
                                         afstand - distance between us: ' + self._distanceHuman, 'RescueBot')
                                     self._waiting = True
+                                    self._callout_timestamp = state['World']['nr_ticks']
                                     # Execute move actions to explore the area
                     return action, {}
 
@@ -630,6 +666,23 @@ class BaselineAgent(ArtificialBrain):
                 # Add the area to the list of searched areas
                 if self._door['room_name'] not in self._searchedRooms:
                     self._searchedRooms.append(self._door['room_name'])
+
+                if self._answered == False and self._waiting:
+                    if 'critical' in self._recentVic:
+                        if not self._decideToStayWaiting(trustBeliefs, state, 15, 0.4):
+                            self._answered = True
+                            self._waiting = False
+                            self._todo.append(self._recentVic)
+                            self._recentVic = None
+                            self._phase = Phase.FIND_NEXT_GOAL
+                    if 'mild' in self._recentVic:
+                        if not self._decideToStayWaiting(trustBeliefs, state, 10, 0.3):
+                            self._rescue = 'alone'
+                            self._answered = True
+                            self._waiting = False
+                            self._recentVic = None
+                            self._phase = Phase.FIND_NEXT_GOAL
+
                 # Make a plan to rescue a found critically injured victim if the human decides so
                 if self.received_messages_content and self.received_messages_content[
                     -1] == 'Rescue' and 'critical' in self._recentVic:
@@ -666,7 +719,6 @@ class BaselineAgent(ArtificialBrain):
                         self._sendMessage('Lets carry ' + str(
                             self._recentVic) + ' together! Please wait until I moved on top of ' + str(
                             self._recentVic) + '.', 'RescueBot')
-
                         trustBeliefs = self._updateWillingnessByAgility(trustBeliefs, state, 0.1)
                     self._goalVic = self._recentVic
                     self._recentVic = None
