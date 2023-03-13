@@ -15,7 +15,6 @@ from matrx.messages.message import Message
 from matrx.messages.message_manager import MessageManager
 from actions1.CustomActions import RemoveObjectTogether, CarryObjectTogether, DropObjectTogether, CarryObject, Drop
 
-
 class Phase(enum.Enum):
     INTRO = 1,
     FIND_NEXT_GOAL = 2,
@@ -37,16 +36,14 @@ class Phase(enum.Enum):
     REMOVE_OBSTACLE_IF_NEEDED = 18,
     ENTER_ROOM = 19
 
-
 def _ticks_to_seconds(ticks):
     return ticks / 10
 
 def _ConfidenceOvertime(ticks):
     return 100 * (1/ 1+ np.exp(-.01 * ticks + 3))
-    
+
 def _sigmoid(x, amplitude=1.0, offset=4.0, slope=0.5):
     return amplitude * (2 / (1 + np.exp(slope * x - offset)))
-
 
 class BaselineAgent(ArtificialBrain):
     def __init__(self, slowdown, condition, name, folder):
@@ -320,7 +317,11 @@ class BaselineAgent(ArtificialBrain):
                 # Otherwise move to the next area to search
                 else:
                     self._state_tracker.update(state)
-                    # Explain why the agent is moving to the specific area, either because it containts the current target victim or because it is the closest unsearched area
+                    """"
+                    Explain why the agent is moving to the specific area, 
+                    either because it contains the current target victim 
+                    or because it is the closest unsearched area
+                    """
                     if self._goalVic in self._foundVictims and str(self._door['room_name']) == \
                             self._foundVictimLocs[self._goalVic]['room'] and not self._remove:
                         if self._condition == 'weak':
@@ -338,7 +339,7 @@ class BaselineAgent(ArtificialBrain):
                     self._currentDoor = self._door['location']
                     # Retrieve move actions to execute
                     action = self._navigator.get_move_action(self._state_tracker)
-                    if action != None:
+                    if action is not None:
                         # Remove obstacles blocking the path to the area 
                         for info in state.values():
                             if 'class_inheritance' in info and 'ObstacleObject' in info[
@@ -347,8 +348,8 @@ class BaselineAgent(ArtificialBrain):
                                                                                                                 (9, 19),
                                                                                                                 (21,
                                                                                                                  19)]:
-                                self._sendMessage('Reaching ' + str(self._door[
-                                                                        'room_name']) + ' will take a bit longer because I found stones blocking my path.',
+                                self._sendMessage('Reaching ' + str(self._door['room_name'])
+                                                  + ' will take a bit longer because I found stones blocking my path.',
                                                   'RescueBot')
                                 return RemoveObject.__name__, {'object_id': info['obj_id']}
                         return action, {}
@@ -358,11 +359,11 @@ class BaselineAgent(ArtificialBrain):
             if Phase.REMOVE_OBSTACLE_IF_NEEDED == self._phase:
                 objects = []
                 agent_location = state[self.agent_id]['location']
+
                 # Identify which obstacle is blocking the entrance
                 for info in state.values():
-                    # Big rock
-                    if 'class_inheritance' in info and 'ObstacleObject' in info['class_inheritance'] and 'rock' in info[
-                        'obj_id']:
+                    # Case 1: Big gray rock
+                    if 'class_inheritance' in info and 'ObstacleObject' in info['class_inheritance'] and 'rock' in info['obj_id']:
                         objects.append(info)
                         #TODO: Play with willingness and competence values
                         value = 2
@@ -412,8 +413,8 @@ class BaselineAgent(ArtificialBrain):
                         else:
                             return None, {}
 
-                    if 'class_inheritance' in info and 'ObstacleObject' in info['class_inheritance'] and 'tree' in info[
-                        'obj_id']:
+                    # Case 2: Tree
+                    if 'class_inheritance' in info and 'ObstacleObject' in info['class_inheritance'] and 'tree' in info['obj_id']:
                         objects.append(info)
                         #TODO: Change the values for the tree.
                         # value = 2
@@ -458,8 +459,8 @@ class BaselineAgent(ArtificialBrain):
                         else:
                             return None, {}
 
-                    if 'class_inheritance' in info and 'ObstacleObject' in info['class_inheritance'] and 'stone' in \
-                            info['obj_id']:
+                    # Case 3: Small brown stone
+                    if 'class_inheritance' in info and 'ObstacleObject' in info['class_inheritance'] and 'stone' in info['obj_id']:
                         objects.append(info)
 
                         #TODO: Play with values (2)
@@ -521,6 +522,7 @@ class BaselineAgent(ArtificialBrain):
                         # Remain idle until the human communicates what to do with the identified obstacle
                         else:
                             return None, {}
+
                 # If no obstacles are blocking the entrance, enter the area
                 if len(objects) == 0:
                     self._answered = False
@@ -570,7 +572,7 @@ class BaselineAgent(ArtificialBrain):
                 # Search the area
                 self._state_tracker.update(state)
                 action = self._navigator.get_move_action(self._state_tracker)
-                if action != None:
+                if action is not None:
                     # Identify victims present in the area
                     for info in state.values():
                         if 'class_inheritance' in info and 'CollectableBlock' in info['class_inheritance']:
@@ -603,14 +605,17 @@ class BaselineAgent(ArtificialBrain):
                                 self._foundVictims.append(vic)
                                 self._foundVictimLocs[vic] = {'location': info['location'],
                                                               'room': self._door['room_name'], 'obj_id': info['obj_id']}
-                                # Communicate which victim the agent found and ask the human whether to rescue the victim now or at a later stage
+                                # TODO
+                                # Communicate which victim the agent found, and
+                                # ask the human whether to rescue the victim now or at a later stage
                                 if 'mild' in vic and self._answered == False and not self._waiting:
-                                    self._sendMessage('Found ' + vic + ' in ' + self._door['room_name'] + '. Please decide whether to "Rescue together", "Rescue alone", or "Continue" searching. \n \n \
-                                        Important features to consider are: \n safe - victims rescued: ' + str(
-                                        self._collectedVictims) + '\n explore - areas searched: area ' + str(
-                                        self._searchedRooms).replace('area ', '') + '\n \
-                                        clock - extra time when rescuing alone: 15 seconds \n afstand - distance between us: ' + self._distanceHuman,
-                                                      'RescueBot')
+                                    self._sendMessage('Found ' + vic + ' in ' + self._door['room_name']
+                                                      + '. Please decide whether to "Rescue together", "Rescue alone",'
+                                                      + ' or "Continue" searching. \n \n Important features to consider are: \n safe - victims rescued: '
+                                                      + str(self._collectedVictims)
+                                                      + '\n explore - areas searched: area ' + str(self._searchedRooms).replace('area ', '')
+                                                      + '\n clock - extra time when rescuing alone: 15 seconds \n afstand - distance between us: '
+                                                      + self._distanceHuman, 'RescueBot')
                                     self._waiting = True
 
                                 if 'critical' in vic and self._answered == False and not self._waiting:
@@ -623,7 +628,8 @@ class BaselineAgent(ArtificialBrain):
                                     # Execute move actions to explore the area
                     return action, {}
 
-                # Communicate that the agent did not find the target victim in the area while the human previously communicated the victim was located here
+                # Communicate that the agent did not find the target victim in the area
+                # while the human previously communicated the victim was located here
                 if self._goalVic in self._foundVictims and self._goalVic not in self._roomVics and \
                         self._foundVictimLocs[self._goalVic]['room'] == self._door['room_name']:
                     self._sendMessage(self._goalVic + ' not present in ' + str(self._door[
