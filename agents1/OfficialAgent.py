@@ -41,7 +41,9 @@ class Phase(enum.Enum):
 def _ticks_to_seconds(ticks):
     return ticks / 10
 
-
+def _ConfidenceOvertime(ticks):
+    return 100 * (1/ 1+ np.exp(-.01 * ticks + 3))
+    
 def _sigmoid(x, amplitude=1.0, offset=4.0, slope=0.5):
     return amplitude * (2 / (1 + np.exp(slope * x - offset)))
 
@@ -459,6 +461,17 @@ class BaselineAgent(ArtificialBrain):
                     if 'class_inheritance' in info and 'ObstacleObject' in info['class_inheritance'] and 'stone' in \
                             info['obj_id']:
                         objects.append(info)
+
+                        #TODO: Play with values (2)
+                        # STONE
+                        if trustBeliefs[self._humanName]['competence'] < 2 and trustBeliefs[self._humanName]['willingness'] < 2:
+                            print("HERE")
+                            self._answered = True
+                            self._waiting = False
+                            # Add area to the to do list
+                            self._tosearch.append(self._door['room_name'])
+                            self._phase = Phase.FIND_NEXT_GOAL
+
 
                         # Communicate which obstacle is blocking the entrance
                         if self._answered == False and not self._remove and not self._waiting:
@@ -973,6 +986,7 @@ class BaselineAgent(ArtificialBrain):
             # potentially distinguish between obstacle types. (!!! This requires changing the messages !!!) (TA)
             if 'Remove' in message and trustBeliefs[self._humanName]['competence'] < 0.5:
                 trustBeliefs[self._humanName]['competence'] += 0.05
+
         return trustBeliefs
 
     # A method to decide if the robot has waited long enough and adjust trust if the human take to long to respond/ help
