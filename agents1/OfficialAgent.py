@@ -358,13 +358,13 @@ class BaselineAgent(ArtificialBrain):
                 agent_location = state[self.agent_id]['location']
                 # Identify which obstacle is blocking the entrance
                 for info in state.values():
+                    # Big rock
                     if 'class_inheritance' in info and 'ObstacleObject' in info['class_inheritance'] and 'rock' in info[
                         'obj_id']:
                         objects.append(info)
-
-                        # Big rock
-                        #TODO: Play with willingness and compentence values
-                        if trustBeliefs[self._humanName]['compentence'] and trustBeliefs[self._humanName]['willingness'] < 0.6:
+                        #TODO: Play with willingness and competence values
+                        if trustBeliefs[self._humanName]['competence'] < 2 and trustBeliefs[self._humanName]['willingness'] < 2:
+                            print("HERE")
                             self._answered = True
                             self._waiting = False
                             # Add area to the to do list
@@ -961,6 +961,8 @@ class BaselineAgent(ArtificialBrain):
             # potentially distinguish between obstacle types. (!!! This requires changing the messages !!!) (TA)
             if 'Remove' in message and trustBeliefs[self._humanName]['competence'] < 0.5:
                 trustBeliefs[self._humanName]['competence'] += 0.05
+
+        return trustBeliefs
 
     # A method to decide if the robot has waited long enough and adjust trust if the human take to long to respond/ help
     def _decideToStayWaiting(self, trustBeliefs, waitedTime, taskDificulty):
