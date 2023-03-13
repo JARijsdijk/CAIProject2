@@ -455,6 +455,16 @@ class BaselineAgent(ArtificialBrain):
                                               'RescueBot')
                             self._waiting = True
                             self._callout_timestamp = state['World']['nr_ticks']
+                        if self._answered == False and not self._remove and self._waiting:
+                            if not self._decideToStayWaiting()
+                                self._answered = True
+                                self._waiting = False
+                                # self._sendMessage('Because human didnt answer, Removing stones blocking ' + str(self._door['room_name']) + '.',
+                                #                   'RescueBot')
+                                # penguin uncomment if we do want the robot to send a message when independently removing stone :)
+                                self._phase = Phase.ENTER_ROOM
+                                self._remove = False
+                                return RemoveObject.__name__, {'object_id': info['obj_id']}
                         # Determine the next area to explore if the human tells the agent not to remove the obstacle          
                         if self.received_messages_content and self.received_messages_content[
                             -1] == 'Continue' and not self._remove:
@@ -967,12 +977,13 @@ class BaselineAgent(ArtificialBrain):
                 trustBeliefs[self._humanName]['competence'] += 0.05
 
     # A method to decide if the robot has waited long enough and adjust trust if the human take to long to respond/ help
-    def _decideToStayWaiting(self, trustBeliefs, waitedTime, taskDificulty):
+    def _decideToStayWaiting(self, trustBeliefs, state, waitThreshold=10, penalty=0.2):
+        time_elapsed = _ticks_to_seconds(state['World']['nr_ticks'] - self._callout_timestamp)
+
         willingness = trustBeliefs[self._humanName]['willingness']
-        if (waitedTime > taskDificulty * (willingness + 1)):
-            trustBeliefs[self._humanName]['willingness'] -= 0.40
+        if (time_elapsed > waitThreshold * (willingness + 1) / 2):
+            trustBeliefs[self._humanName]['willingness'] -= penalty 
             # Restrict the competence belief to a range of -1 to 1
-            trustBeliefs[self._humanName]['willingness'] = np.clip(trustBeliefs[self._humanName]['willingness'], -1, 1)
             self._saveBelief(trustBeliefs, self._folder)
             self._waiting = False
             return False
