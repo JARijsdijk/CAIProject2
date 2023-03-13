@@ -363,7 +363,8 @@ class BaselineAgent(ArtificialBrain):
                         objects.append(info)
 
                         # Big rock
-                        if trustBeliefs[self._humanName]["compentence"] and trustBeliefs[self._humanName]["willingness"] <0:
+                        #TODO: Play with willingness and compentence values
+                        if trustBeliefs[self._humanName]['compentence'] and trustBeliefs[self._humanName]['willingness'] < 0.6:
                             self._answered = True
                             self._waiting = False
                             # Add area to the to do list
