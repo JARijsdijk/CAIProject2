@@ -363,13 +363,15 @@ class BaselineAgent(ArtificialBrain):
                         'obj_id']:
                         objects.append(info)
                         #TODO: Play with willingness and competence values
-                        if trustBeliefs[self._humanName]['competence'] < 2 and trustBeliefs[self._humanName]['willingness'] < 2:
-                            print("HERE")
-                            self._answered = True
-                            self._waiting = False
-                            # Add area to the to do list
-                            self._tosearch.append(self._door['room_name'])
-                            self._phase = Phase.FIND_NEXT_GOAL
+                        value = 2
+                        if self._searchedRooms.len() != 13:
+                            if trustBeliefs[self._humanName]['competence'] < value and trustBeliefs[self._humanName]['willingness'] < value:
+                                print("HERE")
+                                self._answered = True
+                                self._waiting = False
+                                # Add area to the to do list
+                                self._tosearch.append(self._door['room_name'])
+                                self._phase = Phase.FIND_NEXT_GOAL
                         # Communicate which obstacle is blocking the entrance
                         if self._answered == False and not self._remove and not self._waiting:
                             self._sendMessage('Found rock blocking ' + str(self._door['room_name']) + '. Please decide whether to "Remove" or "Continue" searching. \n \n \
@@ -411,6 +413,15 @@ class BaselineAgent(ArtificialBrain):
                     if 'class_inheritance' in info and 'ObstacleObject' in info['class_inheritance'] and 'tree' in info[
                         'obj_id']:
                         objects.append(info)
+                        #TODO: Change the values for the tree.
+                        # value = 2
+                        # if trustBeliefs[self._humanName]['competence'] < value and trustBeliefs[self._humanName]['willingness'] < value:
+                        #     print("HERE")
+                        #     self._answered = True
+                        #     self._waiting = False
+                        #     # Add area to the to do list
+                        #     self._tosearch.append(self._door['room_name'])
+                        #     self._phase = Phase.FIND_NEXT_GOAL
                         # Communicate which obstacle is blocking the entrance
                         if self._answered == False and not self._remove and not self._waiting:
                             self._sendMessage('Found tree blocking  ' + str(self._door['room_name']) + '. Please decide whether to "Remove" or "Continue" searching. \n \n \
@@ -441,13 +452,14 @@ class BaselineAgent(ArtificialBrain):
                             self._phase = Phase.ENTER_ROOM
                             self._remove = False
                             return RemoveObject.__name__, {'object_id': info['obj_id']}
-                        # Remain idle untill the human communicates what to do with the identified obstacle
+                        # Remain idle until the human communicates what to do with the identified obstacle
                         else:
                             return None, {}
 
                     if 'class_inheritance' in info and 'ObstacleObject' in info['class_inheritance'] and 'stone' in \
                             info['obj_id']:
                         objects.append(info)
+
                         # Communicate which obstacle is blocking the entrance
                         if self._answered == False and not self._remove and not self._waiting:
                             self._sendMessage('Found stones blocking  ' + str(self._door['room_name']) + '. Please decide whether to "Remove together", "Remove alone", or "Continue" searching. \n \n \
@@ -961,8 +973,6 @@ class BaselineAgent(ArtificialBrain):
             # potentially distinguish between obstacle types. (!!! This requires changing the messages !!!) (TA)
             if 'Remove' in message and trustBeliefs[self._humanName]['competence'] < 0.5:
                 trustBeliefs[self._humanName]['competence'] += 0.05
-
-        return trustBeliefs
 
     # A method to decide if the robot has waited long enough and adjust trust if the human take to long to respond/ help
     def _decideToStayWaiting(self, trustBeliefs, waitedTime, taskDificulty):
