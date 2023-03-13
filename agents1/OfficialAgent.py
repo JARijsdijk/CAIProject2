@@ -456,7 +456,7 @@ class BaselineAgent(ArtificialBrain):
                             self._waiting = True
                             self._callout_timestamp = state['World']['nr_ticks']
                         if self._answered == False and not self._remove and self._waiting:
-                            if not self._decideToStayWaiting()
+                            if not self._decideToStayWaiting(trustBeliefs, state, 10, 0.2):
                                 self._answered = True
                                 self._waiting = False
                                 # self._sendMessage('Because human didnt answer, Removing stones blocking ' + str(self._door['room_name']) + '.',
@@ -982,7 +982,7 @@ class BaselineAgent(ArtificialBrain):
 
         willingness = trustBeliefs[self._humanName]['willingness']
         if (time_elapsed > waitThreshold * (willingness + 1) / 2):
-            trustBeliefs[self._humanName]['willingness'] -= penalty 
+            trustBeliefs[self._humanName]['willingness'] -= penalty
             # Restrict the competence belief to a range of -1 to 1
             self._saveBelief(trustBeliefs, self._folder)
             self._waiting = False
