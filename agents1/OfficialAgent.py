@@ -361,6 +361,14 @@ class BaselineAgent(ArtificialBrain):
                     if 'class_inheritance' in info and 'ObstacleObject' in info['class_inheritance'] and 'rock' in info[
                         'obj_id']:
                         objects.append(info)
+
+                        # Big rock
+                        if trustBeliefs[self._humanName]["compentence"] and trustBeliefs[self._humanName]["willingness"] <0:
+                            self._answered = True
+                            self._waiting = False
+                            # Add area to the to do list
+                            self._tosearch.append(self._door['room_name'])
+                            self._phase = Phase.FIND_NEXT_GOAL
                         # Communicate which obstacle is blocking the entrance
                         if self._answered == False and not self._remove and not self._waiting:
                             self._sendMessage('Found rock blocking ' + str(self._door['room_name']) + '. Please decide whether to "Remove" or "Continue" searching. \n \n \
