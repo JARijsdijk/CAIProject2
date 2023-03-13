@@ -91,7 +91,7 @@ class BaselineAgent(ArtificialBrain):
         self._trust_timestamp = 0
         # Ask for assistance Timestamp:
         # - The last time trust has been evaluated, in tick number
-        self._callout_timestamp = 0
+        self._callout_timestamp = -1
 
     def initialize(self):
         # Initialization of the state tracker and navigation algorithm
@@ -369,12 +369,14 @@ class BaselineAgent(ArtificialBrain):
                                 self._searchedRooms).replace('area ', '') + ' \
                                 \n clock - removal time: 5 seconds \n afstand - distance between us: ' + self._distanceHuman,
                                               'RescueBot')
+                            self._callout_timestamp = state['World']['nr_ticks']
                             self._waiting = True
                             # Determine the next area to explore if the human tells the agent not to remove the obstacle
                         if self.received_messages_content and self.received_messages_content[
                             -1] == 'Continue' and not self._remove:
                             self._answered = True
                             self._waiting = False
+                            trustBeliefs = self._updateWillingnessByAgility(trustBeliefs, state, 0.05)
                             # Add area to the to do list
                             self._tosearch.append(self._door['room_name'])
                             self._phase = Phase.FIND_NEXT_GOAL
@@ -383,6 +385,7 @@ class BaselineAgent(ArtificialBrain):
                             -1] == 'Remove' or self._remove:
                             if not self._remove:
                                 self._answered = True
+                            trustBeliefs = self._updateWillingnessByAgility(trustBeliefs, state, 0.05)
                             # Tell the human to come over and be idle untill human arrives
                             if not state[{'is_human_agent': True}]:
                                 self._sendMessage('Please come to ' + str(self._door['room_name']) + ' to remove rock.',
@@ -393,7 +396,7 @@ class BaselineAgent(ArtificialBrain):
                             if state[{'is_human_agent': True}]:
                                 self._sendMessage('Lets remove rock blocking ' + str(self._door['room_name']) + '!',
                                                   'RescueBot')
-                                trustBeliefs = self._updateWillingnessByAgility(trustBeliefs, self._folder, state)
+                                trustBeliefs = self._updateWillingnessByAgility(trustBeliefs, state, 0.1)
                                 return None, {}
                         # Remain idle untill the human communicates what to do with the identified obstacle 
                         else:
@@ -410,11 +413,13 @@ class BaselineAgent(ArtificialBrain):
                                 self._searchedRooms).replace('area ', '') + ' \
                                 \n clock - removal time: 10 seconds', 'RescueBot')
                             self._waiting = True
+                            self._callout_timestamp = state['World']['nr_ticks']
                         # Determine the next area to explore if the human tells the agent not to remove the obstacle
                         if self.received_messages_content and self.received_messages_content[
                             -1] == 'Continue' and not self._remove:
                             self._answered = True
                             self._waiting = False
+                            trustBeliefs = self._updateWillingnessByAgility(trustBeliefs, state, 0.05)
                             # Add area to the to do list
                             self._tosearch.append(self._door['room_name'])
                             self._phase = Phase.FIND_NEXT_GOAL
@@ -424,6 +429,7 @@ class BaselineAgent(ArtificialBrain):
                             if not self._remove:
                                 self._answered = True
                                 self._waiting = False
+                                trustBeliefs = self._updateWillingnessByAgility(trustBeliefs, state, 0.05)
                                 self._sendMessage('Removing tree blocking ' + str(self._door['room_name']) + '.',
                                                   'RescueBot')
                             if self._remove:
@@ -448,11 +454,13 @@ class BaselineAgent(ArtificialBrain):
                                 \n clock - removal time together: 3 seconds \n afstand - distance between us: ' + self._distanceHuman + '\n clock - removal time alone: 20 seconds',
                                               'RescueBot')
                             self._waiting = True
+                            self._callout_timestamp = state['World']['nr_ticks']
                         # Determine the next area to explore if the human tells the agent not to remove the obstacle          
                         if self.received_messages_content and self.received_messages_content[
                             -1] == 'Continue' and not self._remove:
                             self._answered = True
                             self._waiting = False
+                            trustBeliefs = self._updateWillingnessByAgility(trustBeliefs, state, 0.05)
                             # Add area to the to do list
                             self._tosearch.append(self._door['room_name'])
                             self._phase = Phase.FIND_NEXT_GOAL
@@ -461,6 +469,7 @@ class BaselineAgent(ArtificialBrain):
                             -1] == 'Remove alone' and not self._remove:
                             self._answered = True
                             self._waiting = False
+                            trustBeliefs = self._updateWillingnessByAgility(trustBeliefs, state, 0.05)
                             self._sendMessage('Removing stones blocking ' + str(self._door['room_name']) + '.',
                                               'RescueBot')
                             self._phase = Phase.ENTER_ROOM
@@ -471,6 +480,8 @@ class BaselineAgent(ArtificialBrain):
                             -1] == 'Remove together' or self._remove:
                             if not self._remove:
                                 self._answered = True
+                            trustBeliefs = self._updateWillingnessByAgility(trustBeliefs, state, 0.05)
+
                             # Tell the human to come over and be idle untill human arrives
                             if not state[{'is_human_agent': True}]:
                                 self._sendMessage(
@@ -482,7 +493,7 @@ class BaselineAgent(ArtificialBrain):
                             if state[{'is_human_agent': True}]:
                                 self._sendMessage('Lets remove stones blocking ' + str(self._door['room_name']) + '!',
                                                   'RescueBot')
-                                trustBeliefs = self._updateWillingnessByAgility(trustBeliefs, self._folder, state)
+                                trustBeliefs = self._updateWillingnessByAgility(trustBeliefs, state, 0.1)
                                 return None, {}
                         # Remain idle until the human communicates what to do with the identified obstacle
                         else:
@@ -595,6 +606,10 @@ class BaselineAgent(ArtificialBrain):
                     self._sendMessage(self._goalVic + ' not present in ' + str(self._door[
                                                                                    'room_name']) + ' because I searched the whole area without finding ' + self._goalVic + '.',
                                       'RescueBot')
+                    # update competence for lying
+                    trustBeliefs[self._humanName]["competence"] -= .2
+                    self._saveBelief(trustBeliefs, self._folder)
+
                     # Remove the victim location from memory
                     self._foundVictimLocs.pop(self._goalVic, None)
                     self._foundVictims.remove(self._goalVic)
@@ -621,7 +636,7 @@ class BaselineAgent(ArtificialBrain):
                         self._sendMessage('Lets carry ' + str(
                             self._recentVic) + ' together! Please wait until I moved on top of ' + str(
                             self._recentVic) + '.', 'RescueBot')
-                        trustBeliefs = self._updateWillingnessByAgility(trustBeliefs, self._folder, state)
+                        trustBeliefs = self._updateWillingnessByAgility(trustBeliefs, state, 0.1)
                     self._goalVic = self._recentVic
                     self._recentVic = None
                     self._phase = Phase.PLAN_PATH_TO_VICTIM
@@ -642,7 +657,7 @@ class BaselineAgent(ArtificialBrain):
                             self._recentVic) + ' together! Please wait until I moved on top of ' + str(
                             self._recentVic) + '.', 'RescueBot')
 
-                        trustBeliefs = self._updateWillingnessByAgility(trustBeliefs, self._folder, state)
+                        trustBeliefs = self._updateWillingnessByAgility(trustBeliefs, state, 0.1)
                     self._goalVic = self._recentVic
                     self._recentVic = None
                     self._phase = Phase.PLAN_PATH_TO_VICTIM
@@ -942,8 +957,6 @@ class BaselineAgent(ArtificialBrain):
 
         # Update the trust value based on for example the received messages
         for message in receivedMessages:
-            # Each time a human communicates, the willingness will increase.
-            trustBeliefs[self._humanName]['willingness'] += 0.010
 
             # Increase agent trust in a team member that rescued a victim
             if 'Collect' in message:
@@ -960,23 +973,25 @@ class BaselineAgent(ArtificialBrain):
             trustBeliefs[self._humanName]['willingness'] -= 0.40
             # Restrict the competence belief to a range of -1 to 1
             trustBeliefs[self._humanName]['willingness'] = np.clip(trustBeliefs[self._humanName]['willingness'], -1, 1)
-            self._saveTrustValues(trustBeliefs, self._folder)
+            self._saveBelief(trustBeliefs, self._folder)
             self._waiting = False
             return False
         return True
 
-        return self._saveBelief(trustBeliefs, folder)
-
-    def _updateWillingnessByAgility(self, trustBeliefs, folder, state):
+    def _updateWillingnessByAgility(self, trustBeliefs, state, amplitude = 0.1):
         """"
         Update willingness based on the time it takes for the human to arrive. Smoothed using a sigmoid function.
         Naivety influences the max amount of "willingness trust" the robot gains upon a positive interaction.
         """
+        if self._callout_timestamp <= -1:
+            print("tried to update agility willingness without callout timestamp")
+            return self._saveBelief(trustBeliefs, self._folder)
+
         time_elapsed = _ticks_to_seconds(state['World']['nr_ticks'] - self._callout_timestamp)
-        amplitude = 0.1
         trustBeliefs[self._humanName]['willingness'] += np.clip(_sigmoid(time_elapsed, amplitude), -amplitude, amplitude * self._naivety)
 
-        return self._saveBelief(trustBeliefs, folder)
+        self._callout_timestamp = -1
+        return self._saveBelief(trustBeliefs, self._folder)
 
     def _sendMessage(self, mssg, sender):
         """
