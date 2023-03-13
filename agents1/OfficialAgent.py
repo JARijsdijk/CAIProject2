@@ -364,7 +364,7 @@ class BaselineAgent(ArtificialBrain):
                         objects.append(info)
                         #TODO: Play with willingness and competence values
                         value = 2
-                        if self._searchedRooms.len() != 13:
+                        if len(self._searchedRooms) != 13:
                             if trustBeliefs[self._humanName]['competence'] < value and trustBeliefs[self._humanName]['willingness'] < value:
                                 print("HERE")
                                 self._answered = True
@@ -973,6 +973,7 @@ class BaselineAgent(ArtificialBrain):
             # potentially distinguish between obstacle types. (!!! This requires changing the messages !!!) (TA)
             if 'Remove' in message and trustBeliefs[self._humanName]['competence'] < 0.5:
                 trustBeliefs[self._humanName]['competence'] += 0.05
+        return trustBeliefs
 
     # A method to decide if the robot has waited long enough and adjust trust if the human take to long to respond/ help
     def _decideToStayWaiting(self, trustBeliefs, waitedTime, taskDificulty):
