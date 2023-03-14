@@ -158,6 +158,7 @@ class BaselineAgent(ArtificialBrain):
             self._distanceToDropZone = 'close'
 
         # Check whether a victim is currently being carried together by the human and agent
+        # TODO stop willingness decay when carrying together?
         for info in state.values():
             if 'is_human_agent' in info and self._humanName in info['name'] and len(info['is_carrying']) > 0:
                 if 'critical' in info['is_carrying'][0]['obj_id'] \
@@ -312,7 +313,7 @@ class BaselineAgent(ArtificialBrain):
             if Phase.PLAN_PATH_TO_ROOM == self._phase:
                 self._navigator.reset_full()
                 # Switch to a different area when the human found a victim
-                # TODO do we believe the human?
+                # TODO decide if we believe the human
                 if self._targetVictim and self._targetVictim in self._foundVictims \
                         and 'location' not in self._foundVictimLocations[self._targetVictim].keys():
                     self._door = state.get_room_doors(self._foundVictimLocations[self._targetVictim]['room'])[0]
@@ -331,16 +332,18 @@ class BaselineAgent(ArtificialBrain):
 
             if Phase.FOLLOW_PATH_TO_ROOM == self._phase:
                 # Find the next victim to rescue if the previously identified target victim was rescued by the human
-                # TODO do we believe the human?
+                # TODO decide if we believe the human
                 if self._targetVictim and self._targetVictim in self._collectedVictims:
                     self._currentDoor = None
                     self._phase = Phase.FIND_NEXT_GOAL
                 # Identify which area to move to because the human found the previously identified target victim
+                # TODO decide if we believe the human
                 if self._targetVictim and self._targetVictim in self._foundVictims \
                         and self._door['room_name'] != self._foundVictimLocations[self._targetVictim]['room']:
                     self._currentDoor = None
                     self._phase = Phase.FIND_NEXT_GOAL
                 # Identify the next area to search if the human already searched the previously identified area
+                # TODO decide if we believe the human
                 if self._door['room_name'] in self._searchedRooms and self._targetVictim not in self._foundVictims:
                     self._currentDoor = None
                     self._phase = Phase.FIND_NEXT_GOAL
@@ -383,7 +386,7 @@ class BaselineAgent(ArtificialBrain):
                 # Identify which obstacle is blocking the entrance
                 for info in state.values():
                     # Case 1: Big gray rock
-                    # TODO
+                    # TODO decide what to do about obstacle
                     if 'class_inheritance' in info and 'ObstacleObject' in info['class_inheritance'] and 'rock' in info['obj_id']:
                         objects.append(info)
                         # Communicate which obstacle is blocking the entrance
@@ -408,6 +411,7 @@ class BaselineAgent(ArtificialBrain):
                             if not self._remove:
                                 self._answered = True
                             # Tell the human to come over and be idle until human arrives
+                            # TODO wait for how long
                             if not state[{'is_human_agent': True}]:
                                 self._send_message('Please come to ' + str(self._door['room_name']) + ' to remove rock.', 'RescueBot')
                                 return None, {}
@@ -416,11 +420,12 @@ class BaselineAgent(ArtificialBrain):
                                 self._send_message('Lets remove rock blocking ' + str(self._door['room_name']) + '!', 'RescueBot')
                                 return None, {}
                         # Remain idle until the human communicates what to do with the identified obstacle
+                        # TODO wait for how long
                         else:
                             return None, {}
 
                     # Case 2: Tree
-                    # TODO
+                    # TODO decide what to do about obstacle
                     if 'class_inheritance' in info and 'ObstacleObject' in info['class_inheritance'] and 'tree' in info['obj_id']:
                         objects.append(info)
                         # Communicate which obstacle is blocking the entrance
@@ -451,11 +456,12 @@ class BaselineAgent(ArtificialBrain):
                             self._remove = False
                             return RemoveObject.__name__, {'object_id': info['obj_id']}
                         # Remain idle until the human communicates what to do with the identified obstacle
+                        # TODO wait for how long
                         else:
                             return None, {}
 
                     # Case 3: Small brown stone
-                    # TODO
+                    # TODO decide what to do about obstacle
                     if 'class_inheritance' in info and 'ObstacleObject' in info['class_inheritance'] and 'stone' in info['obj_id']:
                         objects.append(info)
                         # Communicate which obstacle is blocking the entrance
@@ -489,6 +495,7 @@ class BaselineAgent(ArtificialBrain):
                             if not self._remove:
                                 self._answered = True
                             # Tell the human to come over and be idle until human arrives
+                            # TODO wait for how long
                             if not state[{'is_human_agent': True}]:
                                 self._send_message('Please come to ' + str(self._door['room_name']) + ' to remove stones together.', 'RescueBot')
                                 return None, {}
@@ -497,6 +504,7 @@ class BaselineAgent(ArtificialBrain):
                                 self._send_message('Lets remove stones blocking ' + str(self._door['room_name']) + '!', 'RescueBot')
                                 return None, {}
                         # Remain idle until the human communicates what to do with the identified obstacle
+                        # TODO wait for how long
                         else:
                             return None, {}
 
@@ -508,7 +516,7 @@ class BaselineAgent(ArtificialBrain):
                     self._phase = Phase.ENTER_ROOM
 
             if Phase.ENTER_ROOM == self._phase:
-                # TODO do we trust what the human says?
+                # TODO decide if we trust what the human says
                 self._answered = False
                 # If the target victim is rescued by the human, identify the next victim to rescue
                 if self._targetVictim in self._collectedVictims:
@@ -564,7 +572,7 @@ class BaselineAgent(ArtificialBrain):
                                 # Add the exact victim location to the corresponding dictionary
                                 self._foundVictimLocations[victim] = {'location': info['location'], 'room': self._door['room_name'], 'obj_id': info['obj_id']}
                                 if victim == self._targetVictim:
-                                    # TODO
+                                    # TODO modify trust
                                     # Communicate which victim was found
                                     self._send_message('Found ' + victim + ' in ' + self._door['room_name']
                                                        + ' because you told me ' + victim + ' was located here.', 'RescueBot')
@@ -583,7 +591,7 @@ class BaselineAgent(ArtificialBrain):
                                 self._foundVictimLocations[victim] = {'location': info['location'], 'room': self._door['room_name'], 'obj_id': info['obj_id']}
                                 # Communicate which victim the agent found,
                                 # and ask the human whether to rescue the victim now or at a later stage
-                                # TODO
+                                # TODO decide what to do about victim
                                 if 'mild' in victim and not self._answered and not self._waiting:
                                     self._send_message('Found ' + victim + ' in ' + self._door['room_name'] +
                                                        '. Please decide whether to "Rescue together", "Rescue alone", or "Continue" searching. \n \n \
@@ -593,7 +601,7 @@ class BaselineAgent(ArtificialBrain):
                                                         clock - extra time when rescuing alone: 15 seconds \n \
                                                         afstand - distance between us: ' + self._distanceToHuman, 'RescueBot')
                                     self._waiting = True
-                                        
+                                # TODO decide what to do about victim
                                 if 'critical' in victim and not self._answered and not self._waiting:
                                     self._send_message('Found ' + victim + ' in ' + self._door['room_name'] +
                                                        '. Please decide whether to "Rescue" or "Continue" searching. \n\n \
@@ -607,7 +615,7 @@ class BaselineAgent(ArtificialBrain):
 
                 # Communicate that the agent did not find the target victim in the area,
                 # while the human previously communicated the victim was located here
-                # TODO
+                # TODO modify trust
                 if self._targetVictim in self._foundVictims and self._targetVictim not in self._victimsInRoom \
                         and self._foundVictimLocations[self._targetVictim]['room'] == self._door['room_name']:
                     self._send_message(self._targetVictim + ' not present in ' + str(self._door['room_name'])
@@ -623,7 +631,7 @@ class BaselineAgent(ArtificialBrain):
                 if self._door['room_name'] not in self._searchedRooms:
                     self._searchedRooms.append(self._door['room_name'])
                 # Make a plan to rescue a found critically injured victim if the human decides so
-                # TODO
+                # TODO decide what to do about victim
                 if self.received_messages_content and self.received_messages_content[-1] == 'Rescue' and 'critical' in self._recentVictim:
                     self._rescue = 'together'
                     self._answered = True
@@ -640,7 +648,7 @@ class BaselineAgent(ArtificialBrain):
                     self._recentVictim = None
                     self._phase = Phase.PLAN_PATH_TO_VICTIM
                 # Make a plan to rescue a found mildly injured victim together if the human decides so
-                # TODO
+                # TODO decide what to do about victim
                 if self.received_messages_content and self.received_messages_content[-1] == 'Rescue together' and 'mild' in self._recentVictim:
                     self._rescue = 'together'
                     self._answered = True
@@ -651,7 +659,7 @@ class BaselineAgent(ArtificialBrain):
                                            + str(self._recentVictim) + ' together.', 'RescueBot')
                     # Tell the human to carry the mildly injured victim together
                     if state[{'is_human_agent': True}]:
-                        self._send_message('Lets carry ' + str(self._recentVictim)  + ' together! \
+                        self._send_message('Lets carry ' + str(self._recentVictim) + ' together! \
                         Please wait until I moved on top of ' + str(self._recentVictim) + '.', 'RescueBot')
                     self._targetVictim = self._recentVictim
                     self._recentVictim = None
@@ -676,6 +684,7 @@ class BaselineAgent(ArtificialBrain):
                     self._recentVictim = None
                     self._phase = Phase.FIND_NEXT_GOAL
                 # Remain idle until the human communicates to the agent what to do with the found victim
+                # TODO wait for how long
                 if self.received_messages_content and self._waiting and self.received_messages_content[-1] != 'Rescue'\
                         and self.received_messages_content[-1] != 'Continue':
                     return None, {}
@@ -695,6 +704,7 @@ class BaselineAgent(ArtificialBrain):
 
             if Phase.FOLLOW_PATH_TO_VICTIM == self._phase:
                 # Start searching for other victims if the human already rescued the target victim
+                # TODO decide if we believe the human
                 if self._targetVictim and self._targetVictim in self._collectedVictims:
                     self._phase = Phase.FIND_NEXT_GOAL
                 # Otherwise, move towards the location of the found victim
@@ -733,7 +743,7 @@ class BaselineAgent(ArtificialBrain):
                             and info['location'] in self._roomTiles:
                         objects.append(info)
                         # Remain idle when the human has not arrived at the location
-                        # TODO
+                        # TODO wait for how long
                         if self._humanName not in info['name']:
                             self._waiting = True
                             self._moving = False
@@ -801,7 +811,7 @@ class BaselineAgent(ArtificialBrain):
         # Check the content of the received messages
         for messages in received_messages.values():
             for msg in messages:
-                # TODO do we blindly trust messages from teammates
+                # TODO decide if we believe the human
                 # If a received message involves team members searching areas,
                 # then add these areas to the memory of areas that have been explored
                 if msg.startswith("Search:"):
